@@ -21,6 +21,7 @@ public class Client
         System.out.println("Attempting to connect to "+hostname+":"+port);
         socketClient = new Socket(hostname,port);
         System.out.println("Connection Established");
+        //stupid comment
     }
 
     public void readResponse() throws IOException{
