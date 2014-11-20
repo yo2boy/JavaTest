@@ -35,7 +35,7 @@ public class Client
 
     public static void main(String arg[]){
         //Creating a SocketClient object
-        Client client = new Client (/*"localhost"*/"10.16.161.69",9990);
+        Client client = new Client ("localhost",9990);
         try {
             //trying to establish connection to the server
             client.connect();
