@@ -1,19 +1,20 @@
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
+import java.awt.image.BufferedImage;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import javax.imageio.ImageIO;
+//import common.ByteArrayConversion;
 
 public class Server
 {
 
 	private int port;
+	private static final String image = "image.jpg";
+	private static byte[] byteImage;
+	public static FileInputStream fis = null;
 
 	public Server(int port) {
 		this.port = port;
@@ -70,6 +71,9 @@ public class Server
 			try {
 				//A client has connected to this server. Send welcome message
 				sendWelcomeMessage(socket);
+
+
+
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -92,8 +96,8 @@ public class Server
 
 	private void sendWelcomeMessage(Socket client) throws IOException {
 		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(client.getOutputStream()));
-		writer.write("Hello. You are connected to a Simple Socket Server. What is your name?\n");
-		writer.write("IP is " + getIP());
+		//writer.write("Hello. You are connected to a Simple Socket Server. What is your name?\n");
+		writer.write("" + getIP()); //Server's IP
 		writer.flush();
 		writer.close();
 	}
@@ -102,6 +106,8 @@ public class Server
 		InetAddress ip = InetAddress.getLocalHost();
 		return bytesToIP(ip.getAddress());
 	}
+
+
 
 	final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
 
@@ -130,6 +136,32 @@ public class Server
 
 			socketServer_S.start();
 			socketServer_C.start();
+
+			ServerSocket serverSocket = new ServerSocket(portNumber_C);
+
+			Socket socket;
+
+			socket = serverSocket.accept();
+
+			while (true) {
+				File file = new File ("/" + image);
+				BufferedImage bufferedImage = ImageIO.read(file);
+
+				byteImage = new byte[(int) file.length()];
+
+				fis = new FileInputStream(file);
+				fis.read(byteImage);
+				fis.close();
+
+				//byteImage = ByteArrayConversion.toByteArray(bufferedImage);
+
+				System.out.println(byteImage.toString());
+
+				OutputStream os = socket.getOutputStream();
+
+				ObjectOutputStream oos = new ObjectOutputStream(os);
+				oos.writeObject(byteImage);
+			}
 
 		} catch (IOException e) {
 			e.printStackTrace();
