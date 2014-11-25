@@ -32,6 +32,7 @@ public class Client
         while ((userInput = stdIn.readLine()) != null) {
             System.out.println(userInput);
         }
+        stdIn.close();
     }
 
     public static void main(String arg[]){
