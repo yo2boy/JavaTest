@@ -1,23 +1,28 @@
-
+package net.Server;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.HashMap;
+
 import javax.imageio.ImageIO;
 //import common.ByteArrayConversion;
 
-public class Server
-{
+import net.Base.NetworkNode;
 
+public class Server extends NetworkNode
+{
 	private int port;
 	private static final String image = "image.jpg";
 	private static byte[] byteImage;
 	public static FileInputStream fis = null;
+	HashMap records;
 
 	public Server(int port) {
 		this.port = port;
+		records = new HashMap();
 	}
 
 	public void start() throws IOException {
@@ -67,13 +72,19 @@ public class Server
 		public SocketThread(Socket s){
 			this.socket = s;
 		}
+		
 		public void run() {
 			try {
-				//A client has connected to this server. Send welcome message
-				sendWelcomeMessage(socket);
-
-
-
+				//A client has connected to this server. Interpret message type
+				BufferedReader stdIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+				int messageType = Integer.getInteger(stdIn.readLine()).intValue();
+				switch(messageType)
+				{
+					case GET_DHT_IP: collectIP(stdIn.readLine(),stdIn.readLine());break;
+					case FILE_UPDATE: records.put(stdIn.readLine(),stdIn.readLine());break;
+					default: break;
+				}
+				stdIn.close();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -81,6 +92,16 @@ public class Server
 		}
 	}
 
+	public void collectIP(String clientIP, String serverIPs) throws UnknownHostException{
+		if(!serverIPs.contains(this.getIP())){
+			serverIPs += this.getIP() +";";
+			//send to next DHT server in ring
+		}
+		else
+		{
+			//We've collected all of the IPs, we can send it to the client now.
+		}
+	}
 
 	public void connect() throws UnknownHostException, IOException{
 		String hostname = "localhost";
@@ -100,25 +121,6 @@ public class Server
 		writer.write("" + getIP()); //Server's IP
 		writer.flush();
 		writer.close();
-	}
-
-	public String getIP() throws UnknownHostException{
-		InetAddress ip = InetAddress.getLocalHost();
-		return bytesToIP(ip.getAddress());
-	}
-
-
-
-	final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
-
-	private static String bytesToIP(byte[] bytes) {
-		String IP = "";
-		for ( int j = 0; j < bytes.length; j++ ) {
-			int v = bytes[j] & 0xFF;
-			IP += Integer.parseInt(new String(new char[]{hexArray[v >>> 4],hexArray[v & 0x0F]})+"",16);
-			IP += ".";
-		}
-		return IP.substring(0, IP.length() - 1);
 	}
 
 	public static void main(String[] args) {
