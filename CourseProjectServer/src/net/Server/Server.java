@@ -5,7 +5,9 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.Set;
 
 import javax.imageio.ImageIO;
 //import common.ByteArrayConversion;
@@ -20,16 +22,20 @@ public class Server extends NetworkNode
 	public static FileInputStream fis = null;
 	HashMap records;
 
-	public Server(int port) {
+	public Server(int port)
+	{
 		this.port = port;
 		records = new HashMap();
 	}
 
-	public void start() throws IOException {
-		try{
+	public void start() throws IOException
+	{
+		try
+		{
 			connect();
 		}
-		catch(Exception e){
+		catch(Exception e)
+		{
 			System.out.println("DHT likely offline!");
 		}
 		System.out.println("Starting the socket server at port:" + port);
@@ -66,6 +72,7 @@ public class Server extends NetworkNode
 		}
 	}
 
+	
 	class SocketThread extends Thread
 	{
 		Socket socket;
@@ -82,6 +89,7 @@ public class Server extends NetworkNode
 				{
 					case GET_DHT_IP: collectIP(stdIn.readLine(),stdIn.readLine());break;
 					case FILE_UPDATE: records.put(stdIn.readLine(),stdIn.readLine());break;
+					case REMOVE_CLIENT: removeClient(stdIn.readLine());break;
 					default: break;
 				}
 				stdIn.close();
@@ -91,7 +99,17 @@ public class Server extends NetworkNode
 			}
 		}
 	}
+	
+	//Complete method
+	public void removeClient(String IP){
+		Collection v = records.values();
+		while(v.contains(IP))
+		{
+			v.remove(IP);
+		}
+	}
 
+	//Incomplete method
 	public void collectIP(String clientIP, String serverIPs) throws UnknownHostException{
 		if(!serverIPs.contains(this.getIP())){
 			serverIPs += this.getIP() +";";

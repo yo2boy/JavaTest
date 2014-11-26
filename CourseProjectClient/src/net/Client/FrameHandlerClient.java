@@ -39,6 +39,13 @@ public class FrameHandlerClient extends JFrame implements ActionListener {
 		pane.add(buttonGet);
 		
 		buttonOpen.addActionListener(this);
+		frame.addWindowListener(new java.awt.event.WindowAdapter() {
+			public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+				//Insert code that tells the server we're dead.
+				frame.dispose();
+				System.exit(0);
+			}
+		});
     }
     
     public JFrame getFrame(){

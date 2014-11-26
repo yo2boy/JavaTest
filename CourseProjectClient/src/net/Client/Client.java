@@ -68,6 +68,28 @@ public class Client extends NetworkNode
     	return sum%4 + 1;
     }
     
+    public void notifyServersOnDeath()
+    {
+    	for(int i = 0; i < serverIPs.length; i++){
+    		try {
+    			connect(serverIPs[i],serverPorts[i]);
+    			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socketClient.getOutputStream()));
+    			writer.write(REMOVE_CLIENT);
+    			writer.newLine();
+    			writer.write(getIP());
+    			writer.newLine();
+    			writer.close();
+    			socketClient.close();
+    		} catch (UnknownHostException e) {
+
+    			e.printStackTrace();
+    		} catch (IOException e) {
+    		
+    			e.printStackTrace();
+    		}
+    	}
+    }
+    
     public void updateServersOfMapping(String fileName){
     	//something goes here. Used to update servers with a list of files that this client could transfer
     	int serverNum = getServerNumberFromFileName(fileName);
@@ -80,7 +102,8 @@ public class Client extends NetworkNode
 			writer.newLine();
 			writer.write(client.getIP());
 			writer.newLine();
-
+			writer.close();
+			socketClient.close();
 		} catch (UnknownHostException e) {
 
 			e.printStackTrace();
