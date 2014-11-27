@@ -11,7 +11,13 @@ public class FileHandler {
 	public void addMapping (String fileName, String filePath){
 		if (locations != null && !locations.containsKey(fileName)){
 			locations.put(fileName, filePath);
+			try{
 			Client.client.updateServersOfMapping(fileName);
+			}
+			catch(Exception e){
+				System.out.println("Unable to send!");
+			}
+			System.out.println("sent to server");
 		}
 	}
 	

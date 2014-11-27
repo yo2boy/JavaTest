@@ -114,13 +114,13 @@ public class Server extends NetworkNode
 			InputStream is = socket.getInputStream();
 			FileOutputStream fos = new FileOutputStream(fileName);
 			BufferedOutputStream bos = new BufferedOutputStream(fos);
-			System.out.println("reading");
 			for(int i = 0; i< length; i++){
 				data[i] = (byte) is.read();
 				bos.write(data[i]);
 			}
 			bos.flush();
 			bos.close();
+			System.out.println("Success!");
 		}
 	}
 

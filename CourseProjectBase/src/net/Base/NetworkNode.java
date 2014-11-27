@@ -8,6 +8,7 @@ public abstract class NetworkNode {
 	protected static final int FILE_UPDATE = 1;
 	protected static final int REMOVE_CLIENT = 2;
 	protected static final int FILE_TRANSFER = 3;
+	protected static final int REQUEST_FILE_LIST = 4;
 	
 	public String getIP() throws UnknownHostException{
 		InetAddress ip = InetAddress.getLocalHost();
