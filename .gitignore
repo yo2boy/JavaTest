@@ -14,3 +14,4 @@ hs_err_pid*
 .metadata/.log
 .metadata/.mylyn/.taskListIndex/segments.gen
 .metadata/
+*.jpg
