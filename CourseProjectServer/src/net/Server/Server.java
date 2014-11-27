@@ -9,9 +9,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Scanner;
 import java.util.Set;
-
 import javax.imageio.ImageIO;
-//import common.ByteArrayConversion;
 
 import net.Base.NetworkNode;
 
@@ -22,6 +20,7 @@ public class Server extends NetworkNode
 	private static byte[] byteImage;
 	public static FileInputStream fis = null;
 	HashMap records;
+	static int serverNum;
 
 	public Server(int port)
 	{
@@ -73,7 +72,6 @@ public class Server extends NetworkNode
 		}
 	}
 
-
 	class SocketThread extends Thread
 	{
 		Socket socket;
@@ -112,7 +110,9 @@ public class Server extends NetworkNode
 			int bytesRead;
 			int current = 0;
 			InputStream is = socket.getInputStream();
-			FileOutputStream fos = new FileOutputStream(fileName);
+			File f = new File(System.getProperty("user.home"),"images");
+			f.mkdir();
+			FileOutputStream fos = new FileOutputStream(f.getAbsolutePath()+"/"+fileName);
 			BufferedOutputStream bos = new BufferedOutputStream(fos);
 			for(int i = 0; i< length; i++){
 				data[i] = (byte) is.read();
@@ -145,8 +145,8 @@ public class Server extends NetworkNode
 		}
 	}
 
-	public void connect() throws UnknownHostException, IOException{
-		String hostname = "localhost";
+	public void connect() throws IOException{
+		String hostname = "10.16.153.219";
 		int serverPort = 9994;
 		System.out.println("Attempting to connect to "+hostname+":"+serverPort);
 		Socket serverClient = new Socket(hostname, serverPort);
@@ -159,13 +159,16 @@ public class Server extends NetworkNode
 
 	private void sendWelcomeMessage(Socket client) throws IOException {
 		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(client.getOutputStream()));
-		//writer.write("Hello. You are connected to a Simple Socket Server. What is your name?\n");
 		writer.write("" + getIP()); //Server's IP
 		writer.flush();
 		writer.close();
 	}
 
 	public static void main(String[] args) {
+		if(args.length > 0) {
+			serverNum = Integer.parseInt(args[0]);
+			System.out.println("I am server " + args[0]);
+		}
 		// Setting a default port number for clients.
 		int portNumber_C = 9990;
 		// Setting a default port number for servers in the DHT.
@@ -180,32 +183,6 @@ public class Server extends NetworkNode
 
 			socketServer_S.start();
 			socketServer_C.start();
-
-			/*ServerSocket serverSocket = new ServerSocket(portNumber_C);
-
-			Socket socket;
-
-			socket = serverSocket.accept();
-
-			while (true) {
-				File file = new File ("/" + image);
-				BufferedImage bufferedImage = ImageIO.read(file);
-
-				byteImage = new byte[(int) file.length()];
-
-				fis = new FileInputStream(file);
-				fis.read(byteImage);
-				fis.close();
-
-				//byteImage = ByteArrayConversion.toByteArray(bufferedImage);
-
-				System.out.println(byteImage.toString());
-
-				OutputStream os = socket.getOutputStream();
-
-				ObjectOutputStream oos = new ObjectOutputStream(os);
-				oos.writeObject(byteImage);
-			}*/
 
 		} catch (IOException e) {
 			e.printStackTrace();

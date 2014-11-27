@@ -31,14 +31,14 @@ public class Client extends NetworkNode
 		this.port = port;
 	}
 
-	public void connect() throws UnknownHostException, IOException {
+	public void connect() throws IOException {
 		System.out.println("Attempting to connect to " + hostname + ":" + port);
 		socketClient = new Socket(hostname, port);
 		System.out.println("Connection Established");
 		//stupid comment
 	}
 
-	public void connect(String IP, int customPort) throws UnknownHostException, IOException {
+	public void connect(String IP, int customPort) throws IOException {
 		System.out.println("Attempting to connect to " + IP + ":" + customPort);
 		socketClient = new Socket(IP, customPort);
 		System.out.println("Connection Established");
@@ -89,7 +89,7 @@ public class Client extends NetworkNode
 			//writer.close();
 
 			BufferedReader stdIn = new BufferedReader(new InputStreamReader(socketClient.getInputStream()));
-			String message = stdIn.readLine();
+			//String message = stdIn.readLine();
 			
 			FileInputStream fis = new FileInputStream(f);
 			BufferedInputStream bis = new BufferedInputStream(fis);
@@ -139,7 +139,7 @@ public class Client extends NetworkNode
 		int serverNum = getServerNumberFromFileName(fileName);
 		try {
 			//connect(serverIPs[serverNum],serverPorts[serverNum]);
-			connect("localhost",9991);
+			connect("10.16.153.219",9991);
 			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socketClient.getOutputStream()));
 			writer.write(FILE_UPDATE + "");
 			writer.newLine();
@@ -164,7 +164,7 @@ public class Client extends NetworkNode
 
 		Frame frame = fhc.getFrame();
 
-		client = new Client ("localhost",9990);
+		client = new Client ("10.16.153.219",9990);
 		String ipOfServer1 = "";
 		try {
 			//trying to establish connection to the server
