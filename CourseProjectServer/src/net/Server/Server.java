@@ -7,6 +7,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Scanner;
 import java.util.Set;
 
 import javax.imageio.ImageIO;
@@ -36,7 +37,7 @@ public class Server extends NetworkNode
 		}
 		catch(Exception e)
 		{
-			System.out.println("DHT likely offline!");
+			System.out.println("Something happened");
 		}
 		System.out.println("Starting the socket server at port:" + port);
 		ServerThread thread = new ServerThread(port);
@@ -72,34 +73,57 @@ public class Server extends NetworkNode
 		}
 	}
 
-	
+
 	class SocketThread extends Thread
 	{
 		Socket socket;
 		public SocketThread(Socket s){
 			this.socket = s;
 		}
-		
+
 		public void run() {
 			try {
 				//A client has connected to this server. Interpret message type
 				BufferedReader stdIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-				int messageType = Integer.getInteger(stdIn.readLine()).intValue();
-				switch(messageType)
-				{
+				String message = stdIn.readLine();
+				if(message != null){
+					int messageType = Integer.parseInt(message);
+					switch(messageType)
+					{
 					case GET_DHT_IP: collectIP(stdIn.readLine(),stdIn.readLine());break;
 					case FILE_UPDATE: records.put(stdIn.readLine(),stdIn.readLine());break;
 					case REMOVE_CLIENT: removeClient(stdIn.readLine());break;
+					case FILE_TRANSFER: acceptFile(Integer.parseInt(stdIn.readLine()), stdIn.readLine(), stdIn.readLine());break;
 					default: break;
+					}
 				}
-				stdIn.close();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
+
+		public void acceptFile(int length, String fileName, String IP) throws IOException{
+			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+			writer.write("ready");
+			writer.newLine();
+			writer.flush();
+			byte[] data = new byte[length];
+			int bytesRead;
+			int current = 0;
+			InputStream is = socket.getInputStream();
+			FileOutputStream fos = new FileOutputStream(fileName);
+			BufferedOutputStream bos = new BufferedOutputStream(fos);
+			System.out.println("reading");
+			for(int i = 0; i< length; i++){
+				data[i] = (byte) is.read();
+				bos.write(data[i]);
+			}
+			bos.flush();
+			bos.close();
+		}
 	}
-	
+
 	//Complete method
 	public void removeClient(String IP){
 		Collection v = records.values();
@@ -123,7 +147,7 @@ public class Server extends NetworkNode
 
 	public void connect() throws UnknownHostException, IOException{
 		String hostname = "localhost";
-		int serverPort = 9991;
+		int serverPort = 9994;
 		System.out.println("Attempting to connect to "+hostname+":"+serverPort);
 		Socket serverClient = new Socket(hostname, serverPort);
 		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(serverClient.getOutputStream()));
@@ -157,7 +181,7 @@ public class Server extends NetworkNode
 			socketServer_S.start();
 			socketServer_C.start();
 
-			ServerSocket serverSocket = new ServerSocket(portNumber_C);
+			/*ServerSocket serverSocket = new ServerSocket(portNumber_C);
 
 			Socket socket;
 
@@ -181,7 +205,7 @@ public class Server extends NetworkNode
 
 				ObjectOutputStream oos = new ObjectOutputStream(os);
 				oos.writeObject(byteImage);
-			}
+			}*/
 
 		} catch (IOException e) {
 			e.printStackTrace();

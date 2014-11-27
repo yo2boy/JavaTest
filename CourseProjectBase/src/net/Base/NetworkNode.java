@@ -3,10 +3,11 @@ package net.Base;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-public class NetworkNode {
+public abstract class NetworkNode {
 	protected static final int GET_DHT_IP = 0;
 	protected static final int FILE_UPDATE = 1;
 	protected static final int REMOVE_CLIENT = 2;
+	protected static final int FILE_TRANSFER = 3;
 	
 	public String getIP() throws UnknownHostException{
 		InetAddress ip = InetAddress.getLocalHost();
