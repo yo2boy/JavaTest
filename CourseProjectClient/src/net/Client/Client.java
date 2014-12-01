@@ -13,6 +13,8 @@ import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+
 import net.Base.NetworkNode;
 
 public class Client extends NetworkNode
@@ -28,10 +30,12 @@ public class Client extends NetworkNode
 	static int[] serverPorts = new int[4];
 	public static Client client;
 	static int myPort;
+	static UpdateThread ut;
 
 	public Client(String hostname, int port) {
 		this.hostname = hostname;
 		this.port = port;
+		ut = new UpdateThread(this);
 	}
 
 	public void connect() throws IOException {
@@ -64,7 +68,6 @@ public class Client extends NetworkNode
 	public void init(){
 		BufferedWriter writer;
 		try {
-			System.out.println("Writing the request");
 			writer = new BufferedWriter(new OutputStreamWriter(socketClient.getOutputStream()));
 			writer.write(GET_DHT_IP + "");
 			writer.newLine();
@@ -77,9 +80,11 @@ public class Client extends NetworkNode
 			int counter = 0;
 			String line;
 			while(counter < 4 && (line = stdIn.readLine())!=null){
-				serverIPs[counter] = line;
+				int index = line.indexOf(":");
+				String ip = line.substring(0,index);
+				serverIPs[counter] = ip;
+				serverPorts[counter] = Integer.parseInt(line.substring(index+1));
 				counter++;
-				System.out.println("Found a server, the " + (counter + 1) + " server. The IP was " + serverIPs[counter]);
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -94,7 +99,41 @@ public class Client extends NetworkNode
 		for(int i = 0; i < name.length; i++){
 			sum += name[i];
 		}
-		return sum%4 + 1;
+		return sum%4;
+	}
+
+	public String[] requestFileListUpdate()
+	{
+		ArrayList files = new ArrayList();
+		for(int i = 0; i < serverIPs.length;i++){
+			try {
+				connect(serverIPs[i],serverPorts[i]);
+				BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socketClient.getOutputStream()));
+				writer.write(REQUEST_FILE_LIST + "");
+				writer.newLine();
+				writer.write(this.getIP());
+				writer.newLine();
+				writer.flush();
+				BufferedReader stdIn = new BufferedReader(new InputStreamReader(socketClient.getInputStream()));
+				String line;
+				while((line = stdIn.readLine())!=null && !line.equals("null")){
+					files.add(line);
+					//System.out.println("Received line: " + line);
+				}
+			} catch (IOException e) {
+				System.out.println("Something went wrong!");
+				e.printStackTrace();
+			}
+		}
+		Object[] f = files.toArray();
+		String[] fs = new String[f.length];
+		for(int i = 0; i < f.length;i++){
+			fs[i] = f[i].toString();
+		}
+		if(files.size()==0){
+			fs = null;
+		}
+		return fs;
 	}
 
 	public void sendFile(File f)
@@ -116,7 +155,7 @@ public class Client extends NetworkNode
 
 			BufferedReader stdIn = new BufferedReader(new InputStreamReader(socketClient.getInputStream()));
 			//String message = stdIn.readLine();
-			
+
 			FileInputStream fis = new FileInputStream(f);
 			BufferedInputStream bis = new BufferedInputStream(fis);
 			byte[] bytes = new byte[(int) f.length()];
@@ -165,7 +204,7 @@ public class Client extends NetworkNode
 		int serverNum = getServerNumberFromFileName(fileName);
 		try {
 			//connect(serverIPs[serverNum],serverPorts[serverNum]);
-			connect(initIP,initPort);
+			connect(serverIPs[serverNum],serverPorts[serverNum]);
 			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socketClient.getOutputStream()));
 			writer.write(FILE_UPDATE + "");
 			writer.newLine();
@@ -183,6 +222,29 @@ public class Client extends NetworkNode
 		}
 	}
 
+	class UpdateThread extends Thread{
+		Client client;
+		public UpdateThread(Client c){
+			this.client = c;
+		}
+
+		public void run(){
+			String[] tempFiles;
+			while((tempFiles = Client.client.requestFileListUpdate()) == null){
+				try {
+					sleep(100);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+			if(client.fhc != null){
+				client.fhc.fileList = tempFiles;
+				client.fhc.updateLists();
+			}
+			this.run();
+		}
+	}
+
 	//Default arg is the IP and port of server 1, myPort
 	public static void main(String arg[]){
 		//Creating a SocketClient object
@@ -190,27 +252,24 @@ public class Client extends NetworkNode
 			initIP = arg[0];
 			if(arg.length > 1){
 				initPort = Integer.parseInt(arg[1]);
-				if(arg.length > 2){
-					myPort = Integer.parseInt(arg[2]);
-				}
 			}
 		}
-		fh = new FileHandler();
-		fhc = new FrameHandlerClient(fh);
-
-		Frame frame = fhc.getFrame();
-
 		client = new Client (initIP,initPort);
 		try {
 			//trying to establish connection to the server
 			client.connect(initIP, initPort);
 			System.out.println("Attempting to init the client");
 			client.init();
-
+			ut.start();
 		} catch (UnknownHostException e) {
 			System.err.println("Host unknown. Cannot establish connection");
 		} catch (IOException e) {
 			System.err.println("Cannot establish connection. Server may not be up."+e.getMessage());
 		}
+		fh = new FileHandler();
+		fhc = new FrameHandlerClient(fh);
+		Frame frame = fhc.getFrame();
+
+
 	}
 }

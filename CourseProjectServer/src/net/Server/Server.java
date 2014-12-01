@@ -26,37 +26,32 @@ public class Server extends NetworkNode
 	HashMap records;
 	static String nextServerIP;
 	static int nextServerPort;
-	static Server socketServer_C;
-	static Server socketServer_S;
+	static Server socketServer;
+	static HashMap dataPackage;
 
-	public Server(int port)
+	public Server()
 	{
-		this.port = port;
 		records = new HashMap();
+		dataPackage = new HashMap();
 	}
 
-	public void start(String IP, int port, boolean shouldStartNow) throws IOException
+	public void start() throws IOException
 	{
-		try
-		{
-			if(shouldStartNow)connect(IP, port);
-		}
-		catch(Exception e)
-		{
-			System.out.println("Something happened");
-		}
-		System.out.println("Starting the socket server at port:" + port);
-		ServerThread thread = new ServerThread(port);
-		thread.start();
+		ServerThread clientThread = new ServerThread(portNumber_C,this);
+		clientThread.start();
+		ServerThread serverThread = new ServerThread(portNumber_S,this);
+		serverThread.start();
 	}
 
 	class ServerThread extends Thread
 	{
 		private ServerSocket serverSocket;
+		Server theServer;
 		int port;
-		public ServerThread(int port) throws IOException{
+		public ServerThread(int port, Server server) throws IOException{
 			this.port = port;
 			serverSocket = new ServerSocket(port);
+			this.theServer = server;
 		}
 		public void run(){
 			//Listen for clients. Block till one connects
@@ -68,7 +63,7 @@ public class Server extends NetworkNode
 				try {
 					client = serverSocket.accept();
 					if(client != null){
-						SocketThread thread = new SocketThread(client);
+						SocketThread thread = new SocketThread(client,theServer);
 						thread.start();
 					}
 				} catch (IOException e) {
@@ -82,8 +77,10 @@ public class Server extends NetworkNode
 	class SocketThread extends Thread
 	{
 		Socket socket;
-		public SocketThread(Socket s){
+		Server server;
+		public SocketThread(Socket s, Server server){
 			this.socket = s;
+			this.server = server;
 		}
 
 		public void run() {
@@ -96,12 +93,37 @@ public class Server extends NetworkNode
 					switch(messageType)
 					{
 					case GET_DHT_IP: collectIP(stdIn.readLine(),stdIn.readLine());break;
-					case FILE_UPDATE: records.put(stdIn.readLine(),stdIn.readLine());break;
-					case REMOVE_CLIENT: removeClient(stdIn.readLine());break;
+					case FILE_UPDATE: records.put(stdIn.readLine(),stdIn.readLine());dataPackage.put("updated", "1");break;
+					case REMOVE_CLIENT: removeClient(stdIn.readLine());dataPackage.put("updated", "1");break;
 					case FILE_TRANSFER: acceptFile(Integer.parseInt(stdIn.readLine()), stdIn.readLine(), stdIn.readLine());break;
+					case REQUEST_FILE_LIST: updateFileList(stdIn.readLine());break;
 					default: break;
 					}
 				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+
+		public void updateFileList(String requesterIP){
+			BufferedWriter writer;
+			try {
+				writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+				if(dataPackage.containsKey("updated") && dataPackage.get("updated").equals("1")){
+					Object[] files = records.keySet().toArray();
+					Object[] IPs = records.values().toArray();
+					for(int i = 0; i < files.length; i++){
+						//if(!IPs[i].equals(requesterIP)){
+						writer.write(files[i].toString());
+						writer.newLine();
+						//}
+					}
+				}
+				writer.write("null");
+				writer.newLine();
+
+				writer.flush();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -129,6 +151,83 @@ public class Server extends NetworkNode
 			bos.close();
 			System.out.println("Success!");
 		}
+
+		//Incomplete method
+		public void collectIP(String clientIP, String serverIPs) throws UnknownHostException{
+			BufferedWriter writer;
+			boolean initFlag = serverIPs.equals("");
+			if(!serverIPs.contains(server.getIP()+":"+portNumber_C)){
+				serverIPs += (server.getIP()+ ":" + portNumber_C) + ";";
+				//send to next DHT server in ring
+				try {
+					Socket s = connect(nextServerIP,nextServerPort);
+					writer = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
+					writer.write(GET_DHT_IP + "");
+					writer.newLine();
+					writer.write(clientIP);
+					writer.newLine();
+					writer.write(serverIPs);
+					writer.newLine();
+					writer.flush();
+				}
+				catch(Exception e){
+
+				}
+				if(initFlag){
+					while(!dataPackage.containsKey("GET_DHT_IP")){try {
+						sleep(1);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+					}
+					try{
+						//We've collected all of the IPs, we can send it to the client now.
+						serverIPs = (String)dataPackage.remove("GET_DHT_IP");
+						String remainingIPs = serverIPs;
+						String[] ips = new String[4];
+						writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+						for(int i = 0; i < 4; i++){
+							int index = remainingIPs.indexOf(";");
+							ips[i] = remainingIPs.substring(0, index);
+							remainingIPs = remainingIPs.substring(index+1);
+							writer.write(ips[i]);
+							writer.newLine();
+						}
+						writer.flush();
+					}
+					catch(Exception e){
+
+					}
+				}
+			}
+			else
+			{
+				dataPackage.put("GET_DHT_IP", serverIPs);
+				/*try{
+					//We've collected all of the IPs, we can send it to the client now.
+					System.out.println("writing to client");
+					Socket s = connect(clientIP, portNumber_C);
+					String remainingIPs = serverIPs;
+					String[] ips = new String[4];
+					writer = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
+					for(int i = 0; i < 4; i++){
+						int index = remainingIPs.indexOf(";");
+						ips[i] = remainingIPs.substring(0, index);
+						remainingIPs = remainingIPs.substring(index+1);
+						writer.write(ips[i]);
+						writer.newLine();
+					}
+					writer.flush();
+					System.out.println("writen");
+					System.out.println(ips[0]+", "+ips[1]+", "+ips[2]+", "+ips[3]);
+					System.out.println(serverIPs);
+				}
+				catch(Exception e){
+
+				}*/
+
+			}
+		}
 	}
 
 	//Complete method
@@ -140,57 +239,7 @@ public class Server extends NetworkNode
 		}
 	}
 
-	//Incomplete method
-	public void collectIP(String clientIP, String serverIPs) throws UnknownHostException{
-		BufferedWriter writer;
-		if(!serverIPs.contains(this.getIP()+":"+portNumber_C)){
-			serverIPs += (this.getIP()+ ":" + portNumber_C) + ";";
-			//send to next DHT server in ring
 
-			try {
-				Socket s = connect(nextServerIP,nextServerPort);
-				writer = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
-				writer.write(GET_DHT_IP + "");
-				writer.newLine();
-				writer.write(clientIP);
-				writer.newLine();
-				writer.write(serverIPs);
-				writer.newLine();
-				writer.flush();
-			}
-			catch(Exception e){
-
-			}
-		}
-		else
-		{
-			try{
-				//We've collected all of the IPs, we can send it to the client now.
-				System.out.println("writing to client");
-				ServerSocket ss = new ServerSocket(portNumber_C);
-				Socket s = ss.accept();
-				String remainingIPs = serverIPs;
-				String[] ips = new String[4];
-				writer = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
-				for(int i = 0; i < 4; i++){
-					int index = remainingIPs.indexOf(";");
-					ips[i] = remainingIPs.substring(0, index);
-					remainingIPs = remainingIPs.substring(index+1);
-					writer.write(ips[i]);
-					writer.newLine();
-				}
-				writer.flush();
-				System.out.println("writen");
-				System.out.println(ips[0]+", "+ips[1]+", "+ips[2]+", "+ips[3]);
-				System.out.println(serverIPs);
-				ss.close();
-			}
-			catch(Exception e){
-
-			}
-
-		}
-	}
 
 	public Socket connect(String IP, int customPort) throws IOException {
 		Socket serverClient = new Socket(IP, customPort);
@@ -200,29 +249,23 @@ public class Server extends NetworkNode
 	//Args are theClientPort, myClientPort, myServerPort, nextServerIP, nextServerPort
 	public static void main(String[] args) {
 		if(args.length > 0) {
-			clientPort = Integer.parseInt(args[0]);
-			if(args.length > 1) {
-				portNumber_C = Integer.parseInt(args[1]);
+			portNumber_C = Integer.parseInt(args[0]);
+			if(args.length > 1){
+				portNumber_S = Integer.parseInt(args[1]);
 				if(args.length > 2){
-					portNumber_S = Integer.parseInt(args[2]);
+					nextServerIP = args[2];
 					if(args.length > 3){
-						nextServerIP = args[3];
-						if(args.length > 4){
-							nextServerPort = Integer.parseInt(args[4]);
-						}
+						nextServerPort = Integer.parseInt(args[3]);
 					}
 				}
 			}
 		}
+
 		try {
 			// initializing the Socket Server for the client
-			socketServer_C = new Server(portNumber_C);
+			socketServer = new Server();
 
-			// initializing the Socket Server for the server
-			socketServer_S = new Server(portNumber_S);
-
-			socketServer_S.start(null,portNumber_S,false);
-			socketServer_C.start(null,portNumber_C,false);
+			socketServer.start();
 
 		} catch (IOException e) {
 			e.printStackTrace();

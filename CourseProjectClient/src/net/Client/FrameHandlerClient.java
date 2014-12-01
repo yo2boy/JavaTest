@@ -39,12 +39,50 @@ public class FrameHandlerClient extends JFrame implements ActionListener, ListSe
 	JScrollPane myFilesPane;
 	JPanel pane;
 
+	String[] fileList = {"N/A"};
+
 	public FrameHandlerClient(FileHandler fh){
 		fileHandler = fh;
 		frame = new JFrame();
 		updateFrame();
 	}
-	
+
+	public void updateLists()
+	{
+		int selectedIndex = -1;
+		if(allFilesList != null){
+			selectedIndex = allFilesList.getSelectedIndex();
+		}
+		String[] allFiles = fileList;
+		Object[] myFiles = fileHandler.locations.keySet().toArray();
+		allFilesList = new JList(allFiles);
+		allFilesPane = new JScrollPane(allFilesList);
+		allFilesPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+		allFilesPane.setBorder(BorderFactory.createLineBorder(Color.gray));
+		allFilesPane.setBackground(Color.white);
+		if(allFiles != null){
+			allFilesList = new JList(allFiles);
+			allFilesPane = new JScrollPane(allFilesList);
+			allFilesList.setBorder(BorderFactory.createLineBorder(Color.black));
+			allFilesList.addListSelectionListener(this);
+			if(selectedIndex < allFiles.length){
+				allFilesList.setSelectedIndex(selectedIndex);
+			}
+		}
+		myFilesList = new JList(myFiles);
+		myFilesPane = new JScrollPane(myFilesList);
+		myFilesPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+		myFilesPane.setBorder(BorderFactory.createLineBorder(Color.gray));
+		myFilesList.ensureIndexIsVisible(myFilesList.getSelectedIndex());
+		myFilesList.setBorder(BorderFactory.createLineBorder(Color.black));
+		myFilesPane.setBackground(Color.white);
+
+		pane.add(allFilesPane);
+		pane.add(myFilesPane);
+		validate();
+		repaint();
+	}
+
 	public void updateFrame(){
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setTitle("Client");
@@ -58,41 +96,16 @@ public class FrameHandlerClient extends JFrame implements ActionListener, ListSe
 		buttonAdd = new JButton("Add Image File");
 		//buttonAdd.setLocation(250, 250);
 		//buttonAdd.setSize(100, 30);
-		
+
 
 		buttonDownload = new JButton("Download");
 		//buttonDownload.setLocation(250, 300);
 		//buttonDownload.setSize(100, 30);
-		
 
-		String[] allFiles = new String[]
-				{
-				"One", "Two", "Three", "Four"
-				};
-		Object[] myFiles = fileHandler.locations.keySet().toArray();
-		allFilesList = new JList(allFiles);
-		myFilesList = new JList(myFiles);
-
-		allFilesPane = new JScrollPane(allFilesList);
-		allFilesPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
-		allFilesPane.setBorder(BorderFactory.createLineBorder(Color.gray));
-		allFilesList.ensureIndexIsVisible(allFilesList.getSelectedIndex());
-		allFilesList.setBorder(BorderFactory.createLineBorder(Color.black));
-		allFilesPane.setBackground(Color.white);
-		
-		myFilesPane = new JScrollPane(myFilesList);
-		myFilesPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
-		myFilesPane.setBorder(BorderFactory.createLineBorder(Color.gray));
-		myFilesList.ensureIndexIsVisible(myFilesList.getSelectedIndex());
-		myFilesList.setBorder(BorderFactory.createLineBorder(Color.black));
-		myFilesPane.setBackground(Color.white);
-
+		updateLists();
 		resize();
 		frame.setPreferredSize(new Dimension(400,500));
-		
-		pane.add(allFilesPane);
-		pane.add(myFilesPane);
-		
+
 		pane.add(buttonAdd);
 		pane.add(buttonDownload);
 		frame.pack();
@@ -101,7 +114,6 @@ public class FrameHandlerClient extends JFrame implements ActionListener, ListSe
 		buttonAdd.setEnabled(true);
 		buttonAdd.addActionListener(this);
 		buttonDownload.addActionListener(this);
-		allFilesList.addListSelectionListener(this);
 		frame.addWindowListener(new java.awt.event.WindowAdapter() {
 			public void windowClosing(java.awt.event.WindowEvent windowEvent) {
 				//Insert code that tells the server we're dead.
@@ -110,27 +122,27 @@ public class FrameHandlerClient extends JFrame implements ActionListener, ListSe
 			}
 		});
 		frame.addComponentListener(new ComponentListener() {
-		    public void componentResized(ComponentEvent e) {
-		           resize();     
-		    }
+			public void componentResized(ComponentEvent e) {
+				resize();     
+			}
 
 			public void componentHidden(ComponentEvent arg0) {
 				// TODO Auto-generated method stub
-				
+
 			}
 
 			public void componentMoved(ComponentEvent arg0) {
 				// TODO Auto-generated method stub
-				
+
 			}
 
 			public void componentShown(ComponentEvent arg0) {
 				// TODO Auto-generated method stub
-				
+
 			}
 		});
 	}
-	
+
 	public void resize(){
 		buttonAdd.setBounds(pane.getWidth()-150, (int) (pane.getHeight()*0.6) + 40, 120, 30);
 		buttonDownload.setBounds(pane.getWidth()-150, (int) (pane.getHeight()*0.6) - 25, 120, 30);
@@ -180,18 +192,18 @@ public class FrameHandlerClient extends JFrame implements ActionListener, ListSe
 			}
 		}
 	}
-	
+
 	class BasicLayout implements LayoutManager
 	{
 
 		public void addLayoutComponent(String arg0, Component arg1) {
 			// TODO Auto-generated method stub
-			
+
 		}
 
 		public void layoutContainer(Container arg0) {
 			// TODO Auto-generated method stub
-			
+
 		}
 
 		/* Required by LayoutManager. */
@@ -206,13 +218,13 @@ public class FrameHandlerClient extends JFrame implements ActionListener, ListSe
 
 		public void removeLayoutComponent(Component arg0) {
 			// TODO Auto-generated method stub
-			
+
 		}
-		
+
 	}
 
 	public void valueChanged(ListSelectionEvent arg0) {
-		if(allFilesList.getSelectedIndex() != -1){
+		if(allFilesList != null && allFilesList.getSelectedIndex() != -1){
 			buttonDownload.setEnabled(true);
 		}
 		else{
