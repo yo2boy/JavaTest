@@ -22,9 +22,12 @@ public class Client extends NetworkNode
 	static FrameHandlerClient fhc;
 	static FileHandler fh;
 	Socket socketClient;
+	static String initIP;
+	static int initPort;
 	static String[] serverIPs = new String[4];
 	static int[] serverPorts = new int[4];
 	public static Client client;
+	static int myPort;
 
 	public Client(String hostname, int port) {
 		this.hostname = hostname;
@@ -39,9 +42,9 @@ public class Client extends NetworkNode
 	}
 
 	public void connect(String IP, int customPort) throws IOException {
-		System.out.println("Attempting to connect to " + IP + ":" + customPort);
+		//System.out.println("Attempting to connect to " + IP + ":" + customPort);
 		socketClient = new Socket(IP, customPort);
-		System.out.println("Connection Established");
+		//System.out.println("Connection Established");
 		//stupid comment
 	}
 
@@ -59,7 +62,29 @@ public class Client extends NetworkNode
 	}
 
 	public void init(){
-		//put something here
+		BufferedWriter writer;
+		try {
+			System.out.println("Writing the request");
+			writer = new BufferedWriter(new OutputStreamWriter(socketClient.getOutputStream()));
+			writer.write(GET_DHT_IP + "");
+			writer.newLine();
+			writer.write(client.getIP());
+			writer.newLine();
+			writer.write("");
+			writer.newLine();
+			writer.flush();
+			BufferedReader stdIn = new BufferedReader(new InputStreamReader(socketClient.getInputStream()));
+			int counter = 0;
+			String line;
+			while(counter < 4 && (line = stdIn.readLine())!=null){
+				serverIPs[counter] = line;
+				counter++;
+				System.out.println("Found a server, the " + (counter + 1) + " server. The IP was " + serverIPs[counter]);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
 	}
 
 	public static int getServerNumberFromFileName(String fileName){
@@ -75,7 +100,8 @@ public class Client extends NetworkNode
 	public void sendFile(File f)
 	{
 		try {
-			connect();
+			//connect();
+			connect(initIP,initPort);
 			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socketClient.getOutputStream()));
 			writer.write(FILE_TRANSFER + "");
 			writer.newLine();
@@ -139,7 +165,7 @@ public class Client extends NetworkNode
 		int serverNum = getServerNumberFromFileName(fileName);
 		try {
 			//connect(serverIPs[serverNum],serverPorts[serverNum]);
-			connect("10.16.153.219",9991);
+			connect(initIP,initPort);
 			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socketClient.getOutputStream()));
 			writer.write(FILE_UPDATE + "");
 			writer.newLine();
@@ -157,22 +183,29 @@ public class Client extends NetworkNode
 		}
 	}
 
+	//Default arg is the IP and port of server 1, myPort
 	public static void main(String arg[]){
 		//Creating a SocketClient object
+		if(arg.length > 0){
+			initIP = arg[0];
+			if(arg.length > 1){
+				initPort = Integer.parseInt(arg[1]);
+				if(arg.length > 2){
+					myPort = Integer.parseInt(arg[2]);
+				}
+			}
+		}
 		fh = new FileHandler();
 		fhc = new FrameHandlerClient(fh);
 
 		Frame frame = fhc.getFrame();
 
-		client = new Client ("10.16.153.219",9990);
-		String ipOfServer1 = "";
+		client = new Client (initIP,initPort);
 		try {
 			//trying to establish connection to the server
-			client.connect();
-
-			//if successful, read response from server
-			ipOfServer1 = client.readResponse();
-			System.out.println(ipOfServer1);
+			client.connect(initIP, initPort);
+			System.out.println("Attempting to init the client");
+			client.init();
 
 		} catch (UnknownHostException e) {
 			System.err.println("Host unknown. Cannot establish connection");

@@ -176,7 +176,7 @@ public class FrameHandlerClient extends JFrame implements ActionListener, ListSe
 				fileHandler.addMapping(file.getName(),file.getAbsolutePath());
 				updateFrame();
 				//Quickly implement file transfer
-				Client.client.sendFile(file);
+				//Client.client.sendFile(file);
 			}
 		}
 	}

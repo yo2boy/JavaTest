@@ -19,8 +19,15 @@ public class Server extends NetworkNode
 	private static final String image = "image.jpg";
 	private static byte[] byteImage;
 	public static FileInputStream fis = null;
+	static int portNumber_C;
+	static int clientPort;
+	// Setting a default port number for servers in the DHT.
+	static int portNumber_S;
 	HashMap records;
-	static int serverNum;
+	static String nextServerIP;
+	static int nextServerPort;
+	static Server socketServer_C;
+	static Server socketServer_S;
 
 	public Server(int port)
 	{
@@ -28,11 +35,11 @@ public class Server extends NetworkNode
 		records = new HashMap();
 	}
 
-	public void start() throws IOException
+	public void start(String IP, int port, boolean shouldStartNow) throws IOException
 	{
 		try
 		{
-			connect();
+			if(shouldStartNow)connect(IP, port);
 		}
 		catch(Exception e)
 		{
@@ -135,54 +142,87 @@ public class Server extends NetworkNode
 
 	//Incomplete method
 	public void collectIP(String clientIP, String serverIPs) throws UnknownHostException{
-		if(!serverIPs.contains(this.getIP())){
-			serverIPs += this.getIP() +";";
+		BufferedWriter writer;
+		if(!serverIPs.contains(this.getIP()+":"+portNumber_C)){
+			serverIPs += (this.getIP()+ ":" + portNumber_C) + ";";
 			//send to next DHT server in ring
+
+			try {
+				Socket s = connect(nextServerIP,nextServerPort);
+				writer = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
+				writer.write(GET_DHT_IP + "");
+				writer.newLine();
+				writer.write(clientIP);
+				writer.newLine();
+				writer.write(serverIPs);
+				writer.newLine();
+				writer.flush();
+			}
+			catch(Exception e){
+
+			}
 		}
 		else
 		{
-			//We've collected all of the IPs, we can send it to the client now.
+			try{
+				//We've collected all of the IPs, we can send it to the client now.
+				System.out.println("writing to client");
+				ServerSocket ss = new ServerSocket(portNumber_C);
+				Socket s = ss.accept();
+				String remainingIPs = serverIPs;
+				String[] ips = new String[4];
+				writer = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
+				for(int i = 0; i < 4; i++){
+					int index = remainingIPs.indexOf(";");
+					ips[i] = remainingIPs.substring(0, index);
+					remainingIPs = remainingIPs.substring(index+1);
+					writer.write(ips[i]);
+					writer.newLine();
+				}
+				writer.flush();
+				System.out.println("writen");
+				System.out.println(ips[0]+", "+ips[1]+", "+ips[2]+", "+ips[3]);
+				System.out.println(serverIPs);
+				ss.close();
+			}
+			catch(Exception e){
+
+			}
+
 		}
 	}
 
-	public void connect() throws IOException{
-		String hostname = "10.16.153.219";
-		int serverPort = 9994;
-		System.out.println("Attempting to connect to "+hostname+":"+serverPort);
-		Socket serverClient = new Socket(hostname, serverPort);
-		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(serverClient.getOutputStream()));
-		writer.write(getIP());
-		writer.flush();
-		writer.close();
-		System.out.println("Connection Established");
+	public Socket connect(String IP, int customPort) throws IOException {
+		Socket serverClient = new Socket(IP, customPort);
+		return serverClient;
 	}
 
-	private void sendWelcomeMessage(Socket client) throws IOException {
-		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(client.getOutputStream()));
-		writer.write("" + getIP()); //Server's IP
-		writer.flush();
-		writer.close();
-	}
-
+	//Args are theClientPort, myClientPort, myServerPort, nextServerIP, nextServerPort
 	public static void main(String[] args) {
 		if(args.length > 0) {
-			serverNum = Integer.parseInt(args[0]);
-			System.out.println("I am server " + args[0]);
+			clientPort = Integer.parseInt(args[0]);
+			if(args.length > 1) {
+				portNumber_C = Integer.parseInt(args[1]);
+				if(args.length > 2){
+					portNumber_S = Integer.parseInt(args[2]);
+					if(args.length > 3){
+						nextServerIP = args[3];
+						if(args.length > 4){
+							nextServerPort = Integer.parseInt(args[4]);
+						}
+					}
+				}
+			}
 		}
-		// Setting a default port number for clients.
-		int portNumber_C = 9990;
-		// Setting a default port number for servers in the DHT.
-		int portNumber_S = 9991;
-
 		try {
 			// initializing the Socket Server for the client
-			Server socketServer_C = new Server(portNumber_C);
+			socketServer_C = new Server(portNumber_C);
 
 			// initializing the Socket Server for the server
-			Server socketServer_S = new Server(portNumber_S);
+			socketServer_S = new Server(portNumber_S);
 
-			socketServer_S.start();
-			socketServer_C.start();
+			socketServer_S.start(null,portNumber_S,false);
+			socketServer_C.start(null,portNumber_C,false);
 
 		} catch (IOException e) {
 			e.printStackTrace();
